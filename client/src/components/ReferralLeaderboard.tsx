@@ -100,7 +100,6 @@ export default function ReferralLeaderboard({
   return (
     <Box sx={styles.container}>
       <Typography sx={styles.title}>REFERRAL LEADERBOARD</Typography>
-      <Typography sx={styles.subtitle}>Refreshes every 30 minutes.</Typography>
 
       <Box sx={styles.headerRow}>
         <Typography sx={[styles.headerCell, { width: "40px" }]}>Rank</Typography>
@@ -179,17 +178,9 @@ const styles = {
     color: "#d7c529",
     letterSpacing: 0.5,
     textAlign: "center",
-    mb: 0.25,
-  },
-  subtitle: {
-    fontSize: "0.65rem",
-    fontWeight: 400,
-    color: "rgba(208, 201, 141, 0.6)",
-    textAlign: "center",
     mb: 1,
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
   },
+
   headerRow: {
     display: "flex",
     alignItems: "center",
