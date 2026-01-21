@@ -99,14 +99,14 @@ export default function ReferralLeaderboard({
 
   return (
     <Box sx={styles.container}>
-      <Typography sx={styles.title}>REFERRAL LEADERBOARD</Typography>
+      <Typography sx={styles.title}>LEADERBOARD</Typography>
 
       <Box sx={styles.headerRow}>
         <Typography sx={[styles.headerCell, { width: "40px" }]}>Rank</Typography>
         <Typography sx={[styles.headerCell, { width: "70px", textAlign: "center" }]}>
           Prize
         </Typography>
-        <Typography sx={[styles.headerCell, { flex: 1 }]}>Referrer</Typography>
+        <Typography sx={[styles.headerCell, { flex: 1 }]}>Player</Typography>
         <Typography sx={[styles.headerCell, { width: "60px", textAlign: "center" }]}>
           Refs
         </Typography>
