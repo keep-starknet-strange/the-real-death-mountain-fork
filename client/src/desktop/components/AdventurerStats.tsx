@@ -185,7 +185,7 @@ export default function AdventurerStats() {
                     }}
                   >
                     {totalStatValue}
-                    {showItemStats && equippedItemStats[stat as keyof typeof STAT_DESCRIPTIONS] > 0 && (
+                    {showItemStats && !hasPendingStatUpgrades && equippedItemStats[stat as keyof typeof STAT_DESCRIPTIONS] > 0 && (
                       <Box component="span" sx={{ color: '#4caf50', ml: 0.5 }}>
                         (+{equippedItemStats[stat as keyof typeof STAT_DESCRIPTIONS]})
                       </Box>
@@ -282,8 +282,9 @@ export default function AdventurerStats() {
             </Button>}
 
             <Typography sx={{
+              width: hasPendingStatUpgrades ? '18px' : 'auto',
               minWidth: '18px',
-              textAlign: 'right',
+              textAlign: hasPendingStatUpgrades ? 'center' : 'right',
               pt: '1px',
               whiteSpace: 'nowrap',
             }}>
@@ -303,7 +304,7 @@ export default function AdventurerStats() {
                 }}
               >
                 {adventurer?.stats?.[stat as keyof typeof STAT_DESCRIPTIONS]! + selectedStats[stat as keyof typeof STAT_DESCRIPTIONS]!}
-                {showItemStats && equippedItemStats[stat as keyof typeof STAT_DESCRIPTIONS] > 0 && (
+                {showItemStats && !hasPendingStatUpgrades && equippedItemStats[stat as keyof typeof STAT_DESCRIPTIONS] > 0 && (
                   <Box component="span" sx={{ color: '#4caf50', ml: 0.5 }}>
                     (+{equippedItemStats[stat as keyof typeof STAT_DESCRIPTIONS]})
                   </Box>
@@ -600,7 +601,7 @@ const styles = {
   },
   statValue: {
     minWidth: '26px',
-    textAlign: 'right',
+    textAlign: 'center',
     fontSize: '14px',
     pt: '1px',
     flexShrink: 0,
