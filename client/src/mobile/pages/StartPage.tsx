@@ -24,8 +24,8 @@ import Leaderboard from "../components/Leaderboard";
 
 export default function LandingPage() {
   const dungeon = useDungeon();
-  const { account } = useAccount();
-  const { login } = useController();
+  const { account: accountFromHook } = useAccount(); // Keep for reference but use controller account
+  const { account, login } = useController(); // Use account from controller context
   const { currentNetworkConfig } = useDynamicConnector();
   const navigate = useNavigate();
   const [showGames, setShowGames] = useState(false);
@@ -45,11 +45,11 @@ export default function LandingPage() {
       return;
     }
 
-    if (!account) {
+    const activeAccount = account || accountFromHook;
+    if (!activeAccount) {
       login();
       return;
     }
-
     setShowPaymentOptions(true);
   };
 
@@ -71,7 +71,7 @@ export default function LandingPage() {
   const DungeonRewards = dungeon.rewards;
 
   const { games: unfilteredGames, refetch } = useGameTokens({
-    owner: account?.address || "0x0",
+    owner: account?.address || accountFromHook?.address || "0x0",
     sortBy: "minted_at",
     sortOrder: "desc",
     gameOver: false,

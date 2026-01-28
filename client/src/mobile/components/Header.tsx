@@ -54,14 +54,18 @@ export default Header
 const styles = {
   header: {
     width: '100%',
-    height: '50px',
+    minHeight: '50px',
     borderBottom: '2px solid rgba(17, 17, 17, 1)',
     background: 'black',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     boxSizing: 'border-box',
-    px: '10px'
+    px: '10px',
+    paddingTop: 'max(10px, env(safe-area-inset-top))',
+    position: 'sticky',
+    top: 0,
+    zIndex: 1000
   },
   networkContainer: {
     display: 'flex',

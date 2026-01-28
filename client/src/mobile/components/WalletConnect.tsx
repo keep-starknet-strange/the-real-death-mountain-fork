@@ -27,7 +27,17 @@ function WalletConnect() {
           loading={isPending}
           variant='contained'
           color='secondary'
-          onClick={() => login()}
+          onClick={() => {
+            console.log("Login button clicked!");
+            console.log("login function:", login);
+            console.log("login function type:", typeof login);
+            try {
+              login();
+              console.log("login() called successfully");
+            } catch (error) {
+              console.error("Error calling login():", error);
+            }
+          }}
           size='small'
           startIcon={<SportsEsportsIcon />}
           sx={{ minWidth: '100px' }}

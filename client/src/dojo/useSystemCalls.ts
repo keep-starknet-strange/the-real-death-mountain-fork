@@ -69,9 +69,30 @@ export const useSystemCalls = () => {
 
   const executeAction = async (calls: any[], forceResetAction: () => void, successCallback: () => void) => {
     try {
+      // Validate account is available before executing
+      if (!account) {
+        const errorMsg = "Account not available. Please ensure you're logged in.";
+        console.error("❌ Transaction execution failed:", errorMsg);
+        enqueueSnackbar(errorMsg, { variant: 'error', anchorOrigin: { vertical: 'top', horizontal: 'center' } });
+        forceResetAction();
+        throw new Error(errorMsg);
+      }
+
+      // Validate account has address
+      if (!account.address) {
+        const errorMsg = "Account address not available. Session may not be fully established.";
+        console.error("❌ Transaction execution failed:", errorMsg);
+        console.error("Account object:", account);
+        enqueueSnackbar(errorMsg, { variant: 'error', anchorOrigin: { vertical: 'top', horizontal: 'center' } });
+        forceResetAction();
+        throw new Error(errorMsg);
+      }
+
+      console.log("✅ Account validated, executing transaction with address:", account.address);
       await waitForGlobalState(calls, 0);
 
-      let tx = await account!.execute(calls);
+      let tx = await account.execute(calls);
+      console.log("✅ Transaction submitted, hash:", tx.transaction_hash);
       let receipt: any = await waitForPreConfirmedTransaction(tx.transaction_hash, 0);
 
       if (receipt.execution_status === "REVERTED") {
@@ -100,8 +121,50 @@ export const useSystemCalls = () => {
 
       const maxActionCount = Math.max(...validEvents.map((e: GameEvent) => e.action_count));
       return validEvents.filter((event: GameEvent) => event.action_count === 1 || event.action_count === maxActionCount);
-    } catch (error) {
-      console.error("Error executing action:", error);
+    } catch (error: any) {
+      console.error("❌ Error executing action:", error);
+      console.error("Error type:", typeof error);
+      console.error("Error message:", error?.message || error?.toString());
+      console.error("Error details:", JSON.stringify(error, null, 2));
+      
+      // Parse error message to check for specific error types
+      const errorMessage = error?.message || error?.toString() || "";
+      const errorString = JSON.stringify(error) || "";
+      
+      // Check for "already deployed" error - this is actually OK, account already exists
+      if (errorMessage.includes("already deployed") || 
+          errorString.includes("already deployed") ||
+          errorMessage.includes("contract already deployed")) {
+        console.log("ℹ️ Account already deployed - this is expected for existing users");
+        // This is not necessarily an error - the account exists, so we can continue
+        // The transaction might have partially succeeded
+        const errorMsg = "Account already exists. Continuing with existing account...";
+        console.log(errorMsg);
+        // Don't show error snackbar for this - it's informational
+        // But still reset the action state
+        forceResetAction();
+        return false; // Return false to indicate no events were processed
+      }
+      
+      // Check for transaction execution failed
+      if (errorMessage.includes("transaction execution failed") || 
+          errorMessage.includes("Transaction execution failed")) {
+        // Check if it's specifically the "already deployed" case
+        if (errorString.includes("already deployed")) {
+          console.log("ℹ️ Transaction failed due to already deployed contract - this may be OK");
+          forceResetAction();
+          return false;
+        }
+        const errorMsg = "Transaction execution failed. Please check your connection and try again.";
+        enqueueSnackbar(errorMsg, { variant: 'error', anchorOrigin: { vertical: 'top', horizontal: 'center' } });
+      } else if (errorMessage.includes("account") || errorMessage.includes("session")) {
+        const errorMsg = "Account session issue. Please try logging in again.";
+        enqueueSnackbar(errorMsg, { variant: 'error', anchorOrigin: { vertical: 'top', horizontal: 'center' } });
+      } else {
+        const errorMsg = errorMessage || "Transaction failed. Please try again.";
+        enqueueSnackbar(errorMsg, { variant: 'error', anchorOrigin: { vertical: 'top', horizontal: 'center' } });
+      }
+      
       forceResetAction();
       throw error;
     }

@@ -13,4 +13,10 @@ export default defineConfig({
             "@": path.resolve(__dirname, "./src"),
         },
     },
+    server: {
+        host: true, // Allow external connections (for physical devices)
+        port: 5173,
+        https: true, // Required for Capacitor
+        strictPort: true,
+    },
 });

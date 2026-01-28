@@ -26,7 +26,17 @@ function WalletConnect() {
 
         : <Button
           loading={isPending}
-          onClick={() => login()}
+          onClick={() => {
+            console.log("Login button clicked (desktop)!");
+            console.log("login function:", login);
+            console.log("login function type:", typeof login);
+            try {
+              login();
+              console.log("login() called successfully");
+            } catch (error) {
+              console.error("Error calling login():", error);
+            }
+          }}
           variant='contained'
           color='secondary'
           size='small'
