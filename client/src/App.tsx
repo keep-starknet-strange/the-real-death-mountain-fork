@@ -21,16 +21,16 @@ import TermsOfServiceScreen from '@/mobile/containers/TermsOfServiceScreen';
 
 function AppContent() {
   const { useMobileClient } = useUIStore();
-  const { showTermsOfService, acceptTermsOfService } = useController();
+  const { showTermsOfService, acceptTermsOfService, logout } = useController();
   const shouldShowMobile = isMobile || (isBrowser && useMobileClient);
 
   return (
     <>
       {!shouldShowMobile && showTermsOfService && (
-        <TermsOfServiceModal open={showTermsOfService} onAccept={acceptTermsOfService} />
+        <TermsOfServiceModal open={showTermsOfService} onAccept={acceptTermsOfService} onDecline={logout} />
       )}
       {shouldShowMobile && showTermsOfService && (
-        <TermsOfServiceScreen onAccept={acceptTermsOfService} />
+        <TermsOfServiceScreen onAccept={acceptTermsOfService} onDecline={logout} />
       )}
 
       {!shouldShowMobile && (
