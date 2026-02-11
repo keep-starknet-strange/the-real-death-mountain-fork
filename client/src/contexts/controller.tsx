@@ -1,242 +1,281 @@
-import { useStarknetApi } from "@/api/starknet";
-import { useGameTokens } from "@/dojo/useGameTokens";
-import { useSystemCalls } from "@/dojo/useSystemCalls";
-import { useGameStore } from "@/stores/gameStore";
-import { useUIStore } from "@/stores/uiStore";
-import { Payment } from "@/types/game";
-import { useAnalytics } from "@/utils/analytics";
-import { ChainId, NETWORKS } from "@/utils/networkConfig";
-import { useAccount, useConnect, useDisconnect } from "@starknet-react/core";
+import {useStarknetApi} from "@/api/starknet";
+import {useGameTokens} from "@/dojo/useGameTokens";
+import {useSystemCalls} from "@/dojo/useSystemCalls";
+import {useGameStore} from "@/stores/gameStore";
+import {useUIStore} from "@/stores/uiStore";
+import {Payment} from "@/types/game";
+import {useAnalytics} from "@/utils/analytics";
+import {ChainId, NETWORKS} from "@/utils/networkConfig";
+import {useAccount, useConnect, useDisconnect} from "@starknet-react/core";
+import {App} from "@capacitor/app";
+import {Browser} from "@capacitor/browser";
+import {Capacitor} from "@capacitor/core";
 import {
-  createContext,
-  PropsWithChildren,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
+    createContext,
+    PropsWithChildren,
+    useContext,
+    useEffect,
+    useMemo,
+    useState,
 } from "react";
-import { useNavigate } from "react-router-dom";
-import { Account, RpcProvider } from "starknet";
-import { useDynamicConnector } from "./starknet";
-import { delay, stringToFelt } from "@/utils/utils";
-import { useDungeon } from "@/dojo/useDungeon";
+import {useNavigate} from "react-router-dom";
+import {Account, RpcProvider} from "starknet";
+import {useDynamicConnector} from "./starknet";
+import {delay, stringToFelt} from "@/utils/utils";
+import {useDungeon} from "@/dojo/useDungeon";
+import SessionConnector from "@cartridge/connector/session";
+import NativeConnector from "@/contexts/connector/NativeConnector.ts";
 
 export interface ControllerContext {
-  account: any;
-  address: string | undefined;
-  playerName: string;
-  isPending: boolean;
-  tokenBalances: Record<string, string>;
-  goldenPassIds: number[];
-  openProfile: () => void;
-  login: () => void;
-  logout: () => void;
-  enterDungeon: (payment: Payment, txs: any[]) => void;
-  showTermsOfService: boolean;
-  acceptTermsOfService: () => void;
-  openBuyTicket: () => void;
-  bulkMintGames: (amount: number, callback: () => void) => void;
+    account: any;
+    address: string | undefined;
+    playerName: string;
+    isPending: boolean;
+    tokenBalances: Record<string, string>;
+    goldenPassIds: number[];
+    openProfile: () => void;
+    login: () => void;
+    logout: () => void;
+    enterDungeon: (payment: Payment, txs: any[]) => void;
+    showTermsOfService: boolean;
+    acceptTermsOfService: () => void;
+    openBuyTicket: () => void;
+    bulkMintGames: (amount: number, callback: () => void) => void;
 }
 
 // Create a context
 const ControllerContext = createContext<ControllerContext>(
-  {} as ControllerContext
+    {} as ControllerContext
 );
 
 // Create a provider component
-export const ControllerProvider = ({ children }: PropsWithChildren) => {
-  const navigate = useNavigate();
-  const { setShowOverlay } = useGameStore();
-  const { account, address, isConnecting } = useAccount();
-  const { buyGame } = useSystemCalls();
-  const { connector, connectors, connect, isPending } = useConnect();
-  const { disconnect } = useDisconnect();
-  const dungeon = useDungeon();
-  const { currentNetworkConfig } = useDynamicConnector();
-  const { createBurnerAccount, getTokenBalances, goldenPassReady } =
-    useStarknetApi();
-  const { getGameTokens } = useGameTokens();
-  const { skipIntroOutro } = useUIStore();
-  const [burner, setBurner] = useState<Account | null>(null);
-  const [userName, setUserName] = useState<string>();
-  const [creatingBurner, setCreatingBurner] = useState(false);
-  const [tokenBalances, setTokenBalances] = useState({});
-  const [goldenPassIds, setGoldenPassIds] = useState<number[]>([]);
-  const [showTermsOfService, setShowTermsOfService] = useState(false);
-  const { identifyAddress } = useAnalytics();
+export const ControllerProvider = ({children}: PropsWithChildren) => {
+    const navigate = useNavigate();
+    const {setShowOverlay} = useGameStore();
+    const {account, address, isConnecting} = useAccount();
+    const {buyGame} = useSystemCalls();
+    const {connector, connectors, connect, isPending} = useConnect();
+    const {disconnect} = useDisconnect();
+    const dungeon = useDungeon();
+    const {currentNetworkConfig} = useDynamicConnector();
+    const {createBurnerAccount, getTokenBalances, goldenPassReady} =
+        useStarknetApi();
+    const {getGameTokens} = useGameTokens();
+    const {skipIntroOutro} = useUIStore();
+    const [burner, setBurner] = useState<Account | null>(null);
+    const [userName, setUserName] = useState<string>();
+    const [creatingBurner, setCreatingBurner] = useState(false);
+    const [tokenBalances, setTokenBalances] = useState({});
+    const [goldenPassIds, setGoldenPassIds] = useState<number[]>([]);
+    const [showTermsOfService, setShowTermsOfService] = useState(false);
+    const {identifyAddress} = useAnalytics();
 
-  const demoRpcProvider = useMemo(
-    () => new RpcProvider({ nodeUrl: NETWORKS.WP_PG_SLOT.rpcUrl }),
-    []
-  );
+    const demoRpcProvider = useMemo(
+        () => new RpcProvider({nodeUrl: NETWORKS.WP_PG_SLOT.rpcUrl}),
+        []
+    );
 
-  useEffect(() => {
-    if (account) {
-      fetchTokenBalances();
-      identifyAddress({ address: account.address });
+    useEffect(() => {
+        if (account) {
+            fetchTokenBalances();
+            identifyAddress({address: account.address});
 
-      // Check if terms have been accepted
-      const termsAccepted = typeof window !== 'undefined'
-        ? localStorage.getItem('termsOfServiceAccepted')
-        : null;
+            // Check if terms have been accepted
+            const termsAccepted = typeof window !== 'undefined'
+                ? localStorage.getItem('termsOfServiceAccepted')
+                : null;
 
-      if (!termsAccepted) {
-        setShowTermsOfService(true);
-      }
-    }
-  }, [account]);
+            if (!termsAccepted) {
+                setShowTermsOfService(true);
+            }
+        }
+    }, [account]);
 
-  useEffect(() => {
-    if (
-      localStorage.getItem("burner") &&
-      localStorage.getItem("burner_version") === "6"
-    ) {
-      let burner = JSON.parse(localStorage.getItem("burner") as string);
-      setBurner(
-        new Account({
-          provider: demoRpcProvider,
-          address: burner.address,
-          signer: burner.privateKey,
-        })
-      );
-    } else {
-      createBurner();
-    }
-  }, []);
+    useEffect(() => {
+        if (
+            localStorage.getItem("burner") &&
+            localStorage.getItem("burner_version") === "6"
+        ) {
+            let burner = JSON.parse(localStorage.getItem("burner") as string);
+            setBurner(
+                new Account({
+                    provider: demoRpcProvider,
+                    address: burner.address,
+                    signer: burner.privateKey,
+                })
+            );
+        } else {
+            createBurner();
+        }
+    }, []);
 
-  // Get username when connector changes
-  useEffect(() => {
-    const getUsername = async () => {
-      try {
-        const name = await (connector as any)?.username();
-        if (name) setUserName(name);
-      } catch (error) {
-        console.error("Error getting username:", error);
-      }
+    // Get username when connector changes
+    useEffect(() => {
+        const getUsername = async () => {
+            try {
+                const name = await (connector as NativeConnector)?.username();
+                if (name) setUserName(name);
+            } catch (error) {
+                console.error("Error getting username:", error);
+            }
+        };
+
+        if (connector) getUsername();
+    }, [connector]);
+
+    useEffect(() => {
+        if (!Capacitor.isNativePlatform()) return;
+
+        const handleDeepLink = async (url: string) => {
+            try {
+                const parsed = new URL(url);
+                const startapp = parsed.searchParams.get("startapp");
+                if (!startapp) return;
+
+                const sessionConnector = SessionConnector.fromConnectors(connectors);
+                const registration = sessionConnector.controller.ingestSessionFromRedirect(startapp);
+                if (!registration) {
+                    throw new Error("Invalid session payload");
+                }
+                console.log("REGISTRATION", JSON.stringify(registration));
+
+                await Browser.close().catch(() => undefined);
+
+                const account = await sessionConnector.controller.probe();
+                console.log("ACCOUNT: ", account?.address);
+                connect({connector: sessionConnector})
+            } catch (error) {
+                console.error("Failed to handle deep link", error);
+            }
+        };
+
+        const listener = App.addListener("appUrlOpen", (event) => {
+            if (event.url) handleDeepLink(event.url);
+        });
+        return () => {
+            listener.then((l) => l.remove());
+        };
+    }, [connectors, connect]);
+
+    const resolvePlayerName = () => {
+        const candidateName = (userName || "Adventurer").trim();
+        const truncatedName = candidateName.slice(0, 31);
+        try {
+            stringToFelt(truncatedName);
+            return truncatedName;
+        } catch {
+            return "Adventurer";
+        }
     };
 
-    if (connector) getUsername();
-  }, [connector]);
+    const enterDungeon = async (payment: Payment, txs: any[]) => {
+        if (!account) return;
+        const resolvedName = resolvePlayerName();
+        const resolvedRecipient = account.address;
 
-  const resolvePlayerName = () => {
-    const candidateName = (userName || "Adventurer").trim();
-    const truncatedName = candidateName.slice(0, 31);
-    try {
-      stringToFelt(truncatedName);
-      return truncatedName;
-    } catch {
-      return "Adventurer";
+        let gameId = await buyGame(
+            account,
+            payment,
+            resolvedName,
+            txs,
+            1,
+            () => {
+                navigate(`/${dungeon.id}/play?mode=entering`);
+            },
+            resolvedRecipient
+        );
+
+        if (gameId) {
+            await delay(2000);
+            navigate(`/${dungeon.id}/play?id=${gameId}`, {replace: true});
+            fetchTokenBalances();
+            if (!skipIntroOutro) {
+                setShowOverlay(false);
+            }
+        } else {
+            navigate(`/${dungeon.id}`, {replace: true});
+        }
+    };
+
+    const bulkMintGames = async (amount: number, callback: () => void) => {
+        amount = Math.min(amount, 50);
+        const resolvedName = resolvePlayerName();
+
+        await buyGame(
+            account,
+            {paymentType: "Ticket"},
+            resolvedName,
+            [],
+            amount,
+            () => {
+                setTokenBalances(prev => ({
+                    ...prev,
+                    "TICKET": (Number((prev as any)["TICKET"]) - amount).toString()
+                }));
+                callback();
+            }
+        );
+    };
+
+    const createBurner = async () => {
+        setCreatingBurner(true);
+        let account = await createBurnerAccount(demoRpcProvider);
+
+        if (account) {
+            setBurner(account);
+        }
+        setCreatingBurner(false);
+    };
+
+    async function fetchTokenBalances() {
+        let balances = await getTokenBalances(NETWORKS.SN_MAIN.paymentTokens);
+        setTokenBalances(balances);
+
+        let goldenTokenAddress = NETWORKS.SN_MAIN.goldenToken;
+        const allTokens = await getGameTokens(address!, goldenTokenAddress);
+
+        if (allTokens.length > 0) {
+            const cooldowns = await goldenPassReady(goldenTokenAddress, allTokens);
+            setGoldenPassIds(cooldowns);
+        }
     }
-  };
 
-  const enterDungeon = async (payment: Payment, txs: any[]) => {
-    if (!account) return;
-    const resolvedName = resolvePlayerName();
-    const resolvedRecipient = account.address;
+    const acceptTermsOfService = () => {
+        setShowTermsOfService(false);
+    };
 
-    let gameId = await buyGame(
-      account,
-      payment,
-      resolvedName,
-      txs,
-      1,
-      () => {
-        navigate(`/${dungeon.id}/play?mode=entering`);
-      },
-      resolvedRecipient
+    return (
+        <ControllerContext.Provider
+            value={{
+                account:
+                    currentNetworkConfig.chainId === ChainId.WP_PG_SLOT
+                        ? burner
+                        : account,
+                address:
+                    currentNetworkConfig.chainId === ChainId.WP_PG_SLOT
+                        ? burner?.address
+                        : address,
+                playerName: userName || "Adventurer",
+                isPending: isConnecting || isPending || creatingBurner,
+                tokenBalances,
+                goldenPassIds,
+                showTermsOfService,
+                acceptTermsOfService,
+
+                openProfile: () => (connector as any)?.controller?.openProfile(),
+                openBuyTicket: () => (connector as any)?.controller?.openStarterPack(3),
+                login: () =>
+                    connect({
+                        connector: SessionConnector.fromConnectors(connectors),
+                    }),
+                logout: () => disconnect(),
+                enterDungeon,
+                bulkMintGames,
+            }}
+        >
+            {children}
+        </ControllerContext.Provider>
     );
-
-    if (gameId) {
-      await delay(2000);
-      navigate(`/${dungeon.id}/play?id=${gameId}`, { replace: true });
-      fetchTokenBalances();
-      if (!skipIntroOutro) {
-        setShowOverlay(false);
-      }
-    } else {
-      navigate(`/${dungeon.id}`, { replace: true });
-    }
-  };
-
-  const bulkMintGames = async (amount: number, callback: () => void) => {
-    amount = Math.min(amount, 50);
-    const resolvedName = resolvePlayerName();
-
-    await buyGame(
-      account,
-      { paymentType: "Ticket" },
-      resolvedName,
-      [],
-      amount,
-      () => {
-        setTokenBalances(prev => ({
-          ...prev,
-          "TICKET": (Number((prev as any)["TICKET"]) - amount).toString()
-        }));
-        callback();
-      }
-    );
-  };
-
-  const createBurner = async () => {
-    setCreatingBurner(true);
-    let account = await createBurnerAccount(demoRpcProvider);
-
-    if (account) {
-      setBurner(account);
-    }
-    setCreatingBurner(false);
-  };
-
-  async function fetchTokenBalances() {
-    let balances = await getTokenBalances(NETWORKS.SN_MAIN.paymentTokens);
-    setTokenBalances(balances);
-
-    let goldenTokenAddress = NETWORKS.SN_MAIN.goldenToken;
-    const allTokens = await getGameTokens(address!, goldenTokenAddress);
-
-    if (allTokens.length > 0) {
-      const cooldowns = await goldenPassReady(goldenTokenAddress, allTokens);
-      setGoldenPassIds(cooldowns);
-    }
-  }
-
-  const acceptTermsOfService = () => {
-    setShowTermsOfService(false);
-  };
-
-  return (
-    <ControllerContext.Provider
-      value={{
-        account:
-          currentNetworkConfig.chainId === ChainId.WP_PG_SLOT
-            ? burner
-            : account,
-        address:
-          currentNetworkConfig.chainId === ChainId.WP_PG_SLOT
-            ? burner?.address
-            : address,
-        playerName: userName || "Adventurer",
-        isPending: isConnecting || isPending || creatingBurner,
-        tokenBalances,
-        goldenPassIds,
-        showTermsOfService,
-        acceptTermsOfService,
-
-        openProfile: () => (connector as any)?.controller?.openProfile(),
-        openBuyTicket: () => (connector as any)?.controller?.openStarterPack(3),
-        login: () =>
-          connect({
-            connector: connectors.find((conn) => conn.id === "controller"),
-          }),
-        logout: () => disconnect(),
-        enterDungeon,
-        bulkMintGames,
-      }}
-    >
-      {children}
-    </ControllerContext.Provider>
-  );
 };
 
 export const useController = () => {

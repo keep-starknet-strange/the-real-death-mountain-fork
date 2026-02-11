@@ -1,5 +1,6 @@
 import manifest_mainnet from "../../manifest_mainnet.json";
 import manifest_slot from "../../manifest_slot.json";
+import {SessionPolicies} from "@cartridge/presets";
 
 export interface NetworkConfig {
   chainId: ChainId;
@@ -7,12 +8,7 @@ export interface NetworkConfig {
   manifest: any;
   slot: string;
   preset: string;
-  policies:
-  | Array<{
-    target: string;
-    method: string;
-  }>
-  | undefined;
+  policies: SessionPolicies;
   vrf: boolean;
   rpcUrl: string;
   toriiUrl: string;
@@ -132,18 +128,26 @@ export function getNetworkConfig(networkKey: ChainId): NetworkConfig {
   const network = NETWORKS[networkKey as keyof typeof NETWORKS];
   if (!network) throw new Error(`Network ${networkKey} not found`);
 
-  const policies = [
-    // Dungeon ticket approve
-    {
-      target: "0x0452810188C4Cb3AEbD63711a3b445755BC0D6C4f27B923fDd99B1A118858136",
-      method: "approve",
-    },
-    // Dungeon buy_game
-    {
-      target: "0x00a67ef20b61a9846e1c82b411175e6ab167ea9f8632bd6c2091823c3629ec42",
-      method: "buy_game",
-    },
-  ];
+    const policies: SessionPolicies = {
+        contracts: {
+            "0x452810188c4cb3aebd63711a3b445755bc0d6c4f27b923fdd99b1a118858136": {
+                methods: [
+                    {
+                        name: "Approve",
+                        entrypoint: "approve"
+                    }
+                ]
+            },
+            "0x00a67ef20b61a9846e1c82b411175e6ab167ea9f8632bd6c2091823c3629ec42": {
+                methods: [
+                    {
+                        name: "Buy Game",
+                        entrypoint: "buy_game"
+                    }
+                ]
+            }
+        }
+    }
 
   return {
     chainId: network.chainId,
