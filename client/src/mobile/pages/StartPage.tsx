@@ -393,8 +393,8 @@ export default function LandingPage() {
 
 const styles = {
   container: {
-    maxWidth: "500px",
-    height: "calc(100dvh - 120px)",
+    width: "90%",
+    height: "80%",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",

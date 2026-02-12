@@ -164,11 +164,12 @@ const styles = {
     left: 0,
     width: '100%',
     height: '64px',
+    paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+    boxSizing: 'content-box',
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    boxSizing: 'border-box',
     zIndex: 1000,
   },
   mainNavItems: {
