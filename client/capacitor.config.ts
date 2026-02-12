@@ -7,8 +7,8 @@ const config: CapacitorConfig = {
   "plugins": {
     "SystemBars": {
       "insetsHandling": "css",
-      "style": "LIGHT",
-      "hidden": true,
+      "style": "DARK",
+      "hidden": false,
       "animation": "NONE"
     }
   }
