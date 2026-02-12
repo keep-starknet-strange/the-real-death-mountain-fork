@@ -10,14 +10,7 @@ import {useAccount, useConnect, useDisconnect} from "@starknet-react/core";
 import {App} from "@capacitor/app";
 import {Browser} from "@capacitor/browser";
 import {Capacitor} from "@capacitor/core";
-import {
-    createContext,
-    PropsWithChildren,
-    useContext,
-    useEffect,
-    useMemo,
-    useState,
-} from "react";
+import {createContext, PropsWithChildren, useContext, useEffect, useMemo, useState,} from "react";
 import {useNavigate} from "react-router-dom";
 import {Account, AccountInterface, RpcProvider} from "starknet";
 import {useDynamicConnector} from "./starknet";
@@ -139,7 +132,7 @@ export const ControllerProvider = ({children}: PropsWithChildren) => {
 
                 await Browser.close().catch(() => undefined);
 
-                const account = await sessionConnector.controller.probe();
+                const _ = await sessionConnector.controller.probe();
                 connect({connector: sessionConnector})
             } catch (error) {
                 console.error("Failed to handle deep link", error);

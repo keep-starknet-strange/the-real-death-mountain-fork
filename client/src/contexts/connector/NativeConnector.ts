@@ -1,10 +1,12 @@
 import {Connector, InjectedConnector} from "@starknet-react/core";
-import NativeProvider, {NativeOptions} from "@/contexts/connector/NativeProvider.ts";
+import {SessionOptions} from "@cartridge/controller/session";
+import NativeProvider from "@/contexts/connector/NativeProvider.ts";
 
 export default class NativeConnector extends InjectedConnector {
+
     public controller: NativeProvider;
 
-    constructor(options: NativeOptions) {
+    constructor(options: SessionOptions) {
         const controller = new NativeProvider(options);
 
         super({
@@ -26,15 +28,15 @@ export default class NativeConnector extends InjectedConnector {
         }
     }
 
+    username() {
+        return this.controller.username();
+    }
+
     static fromConnectors(connectors: Connector[]): NativeConnector {
         const connector = connectors.find((c) => c.id === "controller_session");
         if (!connector) {
             throw new Error("Session connector not found");
         }
         return connector as NativeConnector;
-    }
-
-    username() {
-        return this.controller.username();
     }
 }
