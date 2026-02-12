@@ -1,6 +1,30 @@
-import SessionProvider, {SessionOptions} from "@cartridge/controller/session";
 import {ec, encode, stark, WalletAccount} from "starknet";
 import {signerToGuid, subscribeCreateSession} from "@cartridge/controller-wasm";
+import {AuthOptions} from "@cartridge/controller/session";
+import BaseProvider from "@/contexts/connector/BaseProvider.ts";
+import {ParsedSessionPolicies, toWasmPolicies} from "@cartridge/controller";
+import {AddStarknetChainParameters} from "@starknet-io/types-js";
+import SessionAccount from "@/contexts/connector/SessionAccount.ts";
+import {SessionPolicies} from "@cartridge/presets";
+import {Capacitor} from "@capacitor/core";
+import {Browser} from "@capacitor/browser";
+
+const KEYCHAIN_URL = "https://x.cartridge.gg";
+const API_URL = "https://api.cartridge.gg";
+
+/** Open a URL in the system/in-app browser on native (for passkeys) or in a new tab on web. */
+async function openUrl(url: string): Promise<void> {
+    if (typeof window === "undefined") return;
+    try {
+        if (Capacitor.isNativePlatform()) {
+            await Browser.open({url});
+        } else {
+            window.open(url, "_blank");
+        }
+    } catch {
+        window.open(url, "_blank");
+    }
+}
 
 interface SessionRegistration {
     username: string;
@@ -14,28 +38,210 @@ interface SessionRegistration {
     allowedPoliciesRoot?: string;
 }
 
-export type NativeOptions = SessionOptions & {
-    /** The project name of Slot instance. */
-    slot?: string;
-    /** The namespace to use to fetch trophies data from indexer. Will be mandatory once profile page is in production */
-    namespace?: string;
-    /** The preset to use */
-    preset?: string;
+export type NativeOptions = {
+    rpc: string;
+    chainId: string;
+    policies: SessionPolicies;
+    redirectUrl: string;
+    disconnectRedirectUrl?: string;
+    keychainUrl?: string;
+    apiUrl?: string;
+    signupOptions?: AuthOptions;
 };
 
-export default class NativeProvider extends SessionProvider {
-    private readonly slot?: string;
-    private readonly namespace?: string;
-    private readonly preset?: string;
+export default class NativeProvider extends BaseProvider {
+    public id = "controller_session";
+    public name = "Controller Session";
 
-    constructor(props: NativeOptions) {
-        super(props);
+    protected _chainId: string;
+    protected _rpcUrl: string;
+    protected _username?: string;
+    protected _redirectUrl: string;
+    protected _disconnectRedirectUrl?: string;
+    protected _policies: ParsedSessionPolicies;
+    protected _keychainUrl: string;
+    protected _apiUrl: string;
+    protected _publicKey: string;
+    protected _sessionKeyGuid: string;
+    protected _signupOptions?: AuthOptions;
+    public reopenBrowser: boolean = true;
 
-        this.slot = props.slot;
-        this.namespace = props.namespace;
-        this.preset = props.preset;
+    constructor({
+                    rpc,
+                    chainId,
+                    policies,
+                    redirectUrl,
+                    disconnectRedirectUrl,
+                    keychainUrl,
+                    apiUrl,
+                    signupOptions,
+                }: NativeOptions) {
+        super();
+
+        this._policies = {
+            verified: false,
+            contracts: policies.contracts
+                ? Object.fromEntries(
+                    Object.entries(policies.contracts).map(([address, contract]) => [
+                        address,
+                        {
+                            ...contract,
+                            methods: contract.methods.map((method) => ({
+                                ...method,
+                                authorized: true,
+                            })),
+                        },
+                    ]),
+                )
+                : undefined,
+            messages: policies.messages?.map((message) => ({
+                ...message,
+                authorized: true,
+            })),
+        };
+
+        this._rpcUrl = rpc;
+        this._chainId = chainId;
+        this._redirectUrl = redirectUrl;
+        this._disconnectRedirectUrl = disconnectRedirectUrl;
+        this._keychainUrl = keychainUrl || KEYCHAIN_URL;
+        this._apiUrl = apiUrl ?? API_URL;
+        this._signupOptions = signupOptions;
+
+        const account = this.tryRetrieveFromQueryOrStorage();
+        if (!account) {
+            const pk = stark.randomAddress();
+            this._publicKey = ec.starkCurve.getStarkKey(pk);
+
+            localStorage.setItem(
+                "sessionSigner",
+                JSON.stringify({
+                    privKey: pk,
+                    pubKey: this._publicKey,
+                }),
+            );
+            this._sessionKeyGuid = signerToGuid({
+                starknet: { privateKey: encode.addHexPrefix(pk) },
+            });
+        } else {
+            const pk = localStorage.getItem("sessionSigner");
+            if (!pk) throw new Error("failed to get sessionSigner");
+
+            const jsonPk: {
+                privKey: string;
+                pubKey: string;
+            } = JSON.parse(pk);
+
+            this._publicKey = jsonPk.pubKey;
+            this._sessionKeyGuid = signerToGuid({
+                starknet: { privateKey: encode.addHexPrefix(jsonPk.privKey) },
+            });
+        }
+
+        if (typeof window !== "undefined") {
+            (window as any).starknet_controller_session = this;
+        }
     }
 
+    private validatePoliciesSubset(
+        newPolicies: ParsedSessionPolicies,
+        existingPolicies: ParsedSessionPolicies,
+    ): boolean {
+        if (newPolicies.contracts) {
+            if (!existingPolicies.contracts) return false;
+
+            for (const [address, contract] of Object.entries(newPolicies.contracts)) {
+                const existingContract = existingPolicies.contracts[address];
+                if (!existingContract) return false;
+
+                for (const method of contract.methods) {
+                    const existingMethod = existingContract.methods.find(
+                        (m) => m.entrypoint === method.entrypoint,
+                    );
+                    if (!existingMethod || !existingMethod.authorized) return false;
+                }
+            }
+        }
+
+        if (newPolicies.messages) {
+            if (!existingPolicies.messages) return false;
+
+            for (const message of newPolicies.messages) {
+                const existingMessage = existingPolicies.messages.find(
+                    (m) =>
+                        JSON.stringify(m.domain) === JSON.stringify(message.domain) &&
+                        JSON.stringify(m.types) === JSON.stringify(message.types),
+                );
+                if (!existingMessage || !existingMessage.authorized) return false;
+            }
+        }
+
+        return true;
+    }
+
+    private padBase64(value: string): string {
+        const padding = value.length % 4;
+        if (padding === 0) {
+            return value;
+        }
+        return value + "=".repeat(4 - padding);
+    }
+
+    private normalizeSession(
+        session: Partial<SessionRegistration>,
+    ): SessionRegistration | undefined {
+        if (
+            session.username === undefined ||
+            session.address === undefined ||
+            session.ownerGuid === undefined ||
+            session.expiresAt === undefined
+        ) {
+            return undefined;
+        }
+
+        return {
+            username: session.username,
+            address: session.address,
+            ownerGuid: session.ownerGuid,
+            transactionHash: session.transactionHash,
+            expiresAt: session.expiresAt,
+            guardianKeyGuid: session.guardianKeyGuid ?? "0x0",
+            metadataHash: session.metadataHash ?? "0x0",
+            sessionKeyGuid: session.sessionKeyGuid ?? this._sessionKeyGuid,
+        };
+    }
+
+    public ingestSessionFromRedirect(
+        encodedSession: string,
+    ): SessionRegistration | undefined {
+        try {
+            const decoded = atob(this.padBase64(encodedSession));
+            const parsed = JSON.parse(decoded) as Partial<SessionRegistration>;
+            const normalized = this.normalizeSession(parsed);
+            if (!normalized) {
+                return undefined;
+            }
+            localStorage.setItem("session", JSON.stringify(normalized));
+            return normalized;
+        } catch (e) {
+            console.error("Failed to ingest session redirect", e);
+            return undefined;
+        }
+    }
+
+    async username() {
+        await this.tryRetrieveFromQueryOrStorage();
+        return this._username;
+    }
+
+    async probe(): Promise<WalletAccount | undefined> {
+        if (this.account) {
+            return this.account;
+        }
+
+        this.account = this.tryRetrieveFromQueryOrStorage();
+        return this.account;
+    }
 
     async connect(): Promise<WalletAccount | undefined> {
         if (this.account) {
@@ -77,20 +283,7 @@ export default class NativeProvider extends SessionProvider {
                     url += `&signers=${encodeURIComponent(JSON.stringify(this._signupOptions))}`;
                 }
 
-                if (this.preset) {
-                    url += `&preset=${this.preset}`;
-                }
-
-                if (this.slot) {
-                    url += `&ps==${this.slot}`;
-                }
-
-                if (this.namespace) {
-                    url += `&ns=${this.namespace}`;
-                }
-
-                console.log("BAKOS URL", url);
-                window.open(url, "_blank");
+                await openUrl(url)
             }
 
             const sessionResult = await subscribeCreateSession(
@@ -118,5 +311,166 @@ export default class NativeProvider extends SessionProvider {
             console.log(e);
             throw e;
         }
+    }
+
+    switchStarknetChain(_chainId: string): Promise<boolean> {
+        throw new Error("switchStarknetChain not implemented");
+    }
+
+    addStarknetChain(_chain: AddStarknetChainParameters): Promise<boolean> {
+        throw new Error("addStarknetChain not implemented");
+    }
+
+    disconnect(): Promise<void> {
+        localStorage.removeItem("sessionSigner");
+        localStorage.removeItem("session");
+        localStorage.removeItem("sessionPolicies");
+        localStorage.removeItem("lastUsedConnector");
+        this.account = undefined;
+        this.emitAccountsChanged([]);
+        this._username = undefined;
+        const disconnectUrl = new URL(`${this._keychainUrl}`);
+        disconnectUrl.pathname = "disconnect";
+
+        this._disconnectRedirectUrl &&
+        disconnectUrl.searchParams.append(
+            "redirect_url",
+            this._disconnectRedirectUrl,
+        );
+
+        const openedWindow = window.open(disconnectUrl);
+        if (openedWindow === null) return Promise.resolve();
+
+        const { resolve, promise } = Promise.withResolvers<void>();
+        function onWindowClose() {
+            if (openedWindow?.closed) {
+                resolve();
+                clearInterval(checkInterval);
+            }
+        }
+        const checkInterval = setInterval(onWindowClose, 500);
+        return promise;
+    }
+
+    tryRetrieveFromQueryOrStorage() {
+        if (this.account) {
+            return this.account;
+        }
+
+        const signerString = localStorage.getItem("sessionSigner");
+        const signer = signerString ? JSON.parse(signerString) : null;
+        let sessionRegistration: SessionRegistration | null = null;
+
+        const sessionString = localStorage.getItem("session");
+        if (sessionString) {
+            const parsed = JSON.parse(sessionString) as Partial<SessionRegistration>;
+            const normalized = this.normalizeSession(parsed);
+            if (normalized) {
+                sessionRegistration = normalized;
+                localStorage.setItem("session", JSON.stringify(sessionRegistration));
+            } else {
+                this.clearStoredSession();
+            }
+        }
+
+        if (window.location.search.includes("startapp")) {
+            const params = new URLSearchParams(window.location.search);
+            const session = params.get("startapp");
+            if (session) {
+                const normalizedSession = this.ingestSessionFromRedirect(session);
+                if (
+                    normalizedSession &&
+                    Number(normalizedSession.expiresAt) !==
+                    Number(sessionRegistration?.expiresAt)
+                ) {
+                    sessionRegistration = normalizedSession;
+                }
+
+                // Remove the session query parameter
+                params.delete("startapp");
+                const newUrl =
+                    window.location.pathname +
+                    (params.toString() ? `?${params.toString()}` : "") +
+                    window.location.hash;
+                window.history.replaceState({}, document.title, newUrl);
+            }
+        }
+
+        if (!sessionRegistration || !signer) {
+            return;
+        }
+
+        // Check expiration
+        const expirationTime = parseInt(sessionRegistration.expiresAt) * 1000;
+        if (Date.now() >= expirationTime) {
+            this.clearStoredSession();
+            return;
+        }
+
+        // Check stored policies
+        const storedPoliciesStr = localStorage.getItem("sessionPolicies");
+        if (storedPoliciesStr) {
+            const storedPolicies = JSON.parse(
+                storedPoliciesStr,
+            ) as ParsedSessionPolicies;
+
+            const isValid = this.validatePoliciesSubset(
+                this._policies,
+                storedPolicies,
+            );
+
+            if (!isValid) {
+                this.clearStoredSession();
+                return;
+            }
+        }
+
+        this._username = sessionRegistration.username;
+        this.account = new SessionAccount(this, {
+            rpcUrl: this._rpcUrl,
+            privateKey: signer.privKey,
+            address: sessionRegistration.address,
+            ownerGuid: sessionRegistration.ownerGuid,
+            chainId: this._chainId,
+            expiresAt: parseInt(sessionRegistration.expiresAt),
+            policies: toWasmPolicies(this._policies),
+            guardianKeyGuid: sessionRegistration.guardianKeyGuid,
+            metadataHash: sessionRegistration.metadataHash,
+            sessionKeyGuid: sessionRegistration.sessionKeyGuid,
+        });
+
+        return this.account;
+    }
+
+    /** Open keychain profile in browser (no iframe), so passkeys work in Capacitor. */
+    async openProfile(tab: string = "inventory"): Promise<void> {
+        if (!this.account) return;
+        const username = await this.username();
+        if (!username) return;
+        const params = new URLSearchParams();
+        params.set("redirect_uri", this._redirectUrl);
+        params.set("public_key", this._publicKey);
+        params.set("redirect_query_name", "startapp");
+        const qs = params.toString();
+        const path = `/account/${encodeURIComponent(username)}/${tab}?${qs}`;
+        await openUrl(`${this._keychainUrl}${path}`);
+    }
+
+    /**
+     * Open keychain starter pack in browser (no iframe).
+     * Path is a best guess; if "Buy ticket" lands on the wrong page, verify Cartridge keychain routes (e.g. /store/{id}) and update.
+     */
+    async openStarterPack(id: string | number): Promise<void> {
+        const params = new URLSearchParams();
+        const qs = params.toString();
+        const path = `/starterpack/${id}${qs ? `?${qs}` : ""}`;
+        await openUrl(`${this._keychainUrl}${path}`);
+    }
+
+    private clearStoredSession(): void {
+        localStorage.removeItem("sessionSigner");
+        localStorage.removeItem("session");
+        localStorage.removeItem("sessionPolicies");
+        localStorage.removeItem("lastUsedConnector");
     }
 }
