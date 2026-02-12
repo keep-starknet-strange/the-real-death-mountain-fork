@@ -14,10 +14,10 @@ import {
 import { useAnalytics } from "@/utils/analytics";
 import { GameEvent } from "@/utils/events";
 import { translateGameEvent } from "@/utils/translation";
-import { delay, stringToFelt } from "@/utils/utils";
+import { delay, formatWasmError, stringToFelt } from "@/utils/utils";
 import { getContractByName } from "@dojoengine/core";
 import { useSnackbar } from "notistack";
-import { CairoOption, CairoOptionVariant, CallData, byteArray, num } from "starknet";
+import {CairoOption, CairoOptionVariant, CallData, byteArray, num, Call} from "starknet";
 import { useGameTokens } from "./useGameTokens";
 
 const TICKET_PRICE_WEI = BigInt("1000000000000000000");
@@ -67,7 +67,7 @@ export const useSystemCalls = () => {
    *   - levelUp: Function to level up and purchase items
    */
 
-  const executeAction = async (calls: any[], forceResetAction: () => void, successCallback: () => void) => {
+  const executeAction = async (calls: Call[], forceResetAction: () => void, successCallback: () => void) => {
     try {
       await waitForGlobalState(calls, 0);
 
@@ -101,7 +101,8 @@ export const useSystemCalls = () => {
       const maxActionCount = Math.max(...validEvents.map((e: GameEvent) => e.action_count));
       return validEvents.filter((event: GameEvent) => event.action_count === 1 || event.action_count === maxActionCount);
     } catch (error) {
-      console.error("Error executing action:", error);
+      console.error("Error executing action:", formatWasmError(error));
+      console.debug("Calls that failed:", calls);
       forceResetAction();
       throw error;
     }
@@ -239,7 +240,7 @@ export const useSystemCalls = () => {
 
       return parseInt(tokenMetadataEvent.data[1], 16);
     } catch (error) {
-      console.error("Error buying game:", error);
+      console.error("Error buying game:", formatWasmError(error));
       throw error;
     }
   };
@@ -282,7 +283,7 @@ export const useSystemCalls = () => {
 
       return parseInt(tokenMetadataEvent.data[1], 16);
     } catch (error) {
-      console.error("Error minting game:", error);
+      console.error("Error minting game:", formatWasmError(error));
       throw error;
     }
   };
@@ -473,7 +474,7 @@ export const useSystemCalls = () => {
       localStorage.removeItem('collectable_beast');
       return tokenId;
     } catch (error) {
-      console.error("Error claiming beast:", error);
+      console.error("Error claiming beast:", formatWasmError(error));
       await delay(1000);
       return claimBeast(gameId, beast, retries + 1);
     }

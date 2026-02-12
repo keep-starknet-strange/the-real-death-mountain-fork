@@ -19,15 +19,14 @@ import {
     useState,
 } from "react";
 import {useNavigate} from "react-router-dom";
-import {Account, RpcProvider} from "starknet";
+import {Account, AccountInterface, RpcProvider} from "starknet";
 import {useDynamicConnector} from "./starknet";
 import {delay, stringToFelt} from "@/utils/utils";
 import {useDungeon} from "@/dojo/useDungeon";
-import SessionConnector from "@cartridge/connector/session";
 import NativeConnector from "@/contexts/connector/NativeConnector.ts";
 
 export interface ControllerContext {
-    account: any;
+    account: AccountInterface | undefined;
     address: string | undefined;
     playerName: string;
     isPending: boolean;
@@ -132,17 +131,15 @@ export const ControllerProvider = ({children}: PropsWithChildren) => {
                 const startapp = parsed.searchParams.get("startapp");
                 if (!startapp) return;
 
-                const sessionConnector = SessionConnector.fromConnectors(connectors);
+                const sessionConnector = NativeConnector.fromConnectors(connectors);
                 const registration = sessionConnector.controller.ingestSessionFromRedirect(startapp);
                 if (!registration) {
                     throw new Error("Invalid session payload");
                 }
-                console.log("REGISTRATION", JSON.stringify(registration));
 
                 await Browser.close().catch(() => undefined);
 
                 const account = await sessionConnector.controller.probe();
-                console.log("ACCOUNT: ", account?.address);
                 connect({connector: sessionConnector})
             } catch (error) {
                 console.error("Failed to handle deep link", error);
@@ -249,7 +246,7 @@ export const ControllerProvider = ({children}: PropsWithChildren) => {
             value={{
                 account:
                     currentNetworkConfig.chainId === ChainId.WP_PG_SLOT
-                        ? burner
+                        ? (burner ?? undefined)
                         : account,
                 address:
                     currentNetworkConfig.chainId === ChainId.WP_PG_SLOT
@@ -262,11 +259,11 @@ export const ControllerProvider = ({children}: PropsWithChildren) => {
                 showTermsOfService,
                 acceptTermsOfService,
 
-                openProfile: () => (connector as any)?.controller?.openProfile(),
-                openBuyTicket: () => (connector as any)?.controller?.openStarterPack(3),
+                openProfile: () => (connector as NativeConnector)?.controller?.openProfile(),
+                openBuyTicket: () => (connector as NativeConnector)?.controller?.openStarterPack(3),
                 login: () =>
                     connect({
-                        connector: SessionConnector.fromConnectors(connectors),
+                        connector: NativeConnector.fromConnectors(connectors),
                     }),
                 logout: () => disconnect(),
                 enterDungeon,
