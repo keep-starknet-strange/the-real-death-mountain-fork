@@ -124,16 +124,16 @@ export const ControllerProvider = ({children}: PropsWithChildren) => {
                 const startapp = parsed.searchParams.get("startapp");
                 if (!startapp) return;
 
-                const sessionConnector = NativeConnector.fromConnectors(connectors);
-                const registration = sessionConnector.controller.ingestSessionFromRedirect(startapp);
+                const connector = NativeConnector.fromConnectors(connectors);
+                const registration = connector.controller.ingestSessionFromRedirect(startapp);
                 if (!registration) {
                     throw new Error("Invalid session payload");
                 }
 
                 await Browser.close().catch(() => undefined);
 
-                const _ = await sessionConnector.controller.probe();
-                connect({connector: sessionConnector})
+                const account = await connector.controller.probe();
+                connect({connector: connector})
             } catch (error) {
                 console.error("Failed to handle deep link", error);
             }

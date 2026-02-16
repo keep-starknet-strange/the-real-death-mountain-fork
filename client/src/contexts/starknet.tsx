@@ -23,7 +23,7 @@ const cartridgeController =
             rpc: controllerConfig.rpcUrl,
             chainId: num.toHex(stringToFelt(controllerConfig.chainId)),
             redirectUrl: "lootsurvivor://session",
-            policies: controllerConfig.policies,
+            preset: controllerConfig.preset,
         })
         : null;
 
