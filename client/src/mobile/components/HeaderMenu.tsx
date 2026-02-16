@@ -26,6 +26,7 @@ import ComputerIcon from "@mui/icons-material/Computer";
 import CloseIcon from "@mui/icons-material/Close";
 import { useSound } from "@/mobile/contexts/Sound";
 import { useUIStore } from "@/stores/uiStore";
+import { useController } from "@/contexts/controller";
 import { isDesktop } from "react-device-detect";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import { useState } from "react";
@@ -37,6 +38,7 @@ interface HeaderMenuProps {
 
 function HeaderMenu({ anchorEl, handleClose }: HeaderMenuProps) {
   const { muted, setMuted, volume, setVolume } = useSound();
+  const { address, logout } = useController();
   const {
     setGameSettingsListOpen,
     setUseMobileClient,
@@ -84,6 +86,35 @@ function HeaderMenu({ anchorEl, handleClose }: HeaderMenuProps) {
           },
         }}
       >
+        {address && (
+          <>
+            <MenuItem
+              onClick={() => {
+                logout();
+                handleClose();
+              }}
+              sx={{
+                color: "#FF0000",
+                backgroundColor: "rgba(255, 0, 0, 0.2)",
+                border: "1px solid rgba(255, 0, 0, 0.3)",
+                mx: 1,
+                mt: 0.5,
+                borderRadius: 1,
+                justifyContent: "center",
+                "&:hover": {
+                  backgroundColor: "rgba(255, 0, 0, 0.3)",
+                },
+              }}
+            >
+              <ListItemText
+                primary="Log out"
+                primaryTypographyProps={{ variant: "h6" }}
+                sx={{ textAlign: "center" }}
+              />
+            </MenuItem>
+            <Divider sx={{ my: 1, borderColor: "rgba(255, 255, 255, 0.1)" }} />
+          </>
+        )}
         <Box px={2}>
           <Typography variant="h6">Music</Typography>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
