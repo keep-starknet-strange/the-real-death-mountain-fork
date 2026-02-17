@@ -148,7 +148,7 @@ export default function BeastScreen({ setIsBattling }: BeastScreenProps) {
     if (battleEvent && !skipCombat) {
       if (battleEvent.type === "attack") {
         // Capture damage before animation starts to prevent stale closure
-        playerDamageRef.current = battleEvent.attack?.damage || 0;
+        playerDamageRef.current = battleEvent.attack?.damage ?? 0;
         isPlayerStrikePlaying.current = true;
         strike.play();
         if (!fastBattle) {
@@ -160,13 +160,13 @@ export default function BeastScreen({ setIsBattling }: BeastScreenProps) {
         // Queue beast attack if player strike is still playing (sequential animation)
         if (isPlayerStrikePlaying.current) {
           pendingBeastAttack.current = {
-            damage: battleEvent.attack?.damage || 0,
-            location: battleEvent.attack?.location || '',
-            critical_hit: battleEvent.attack?.critical_hit || false,
+            damage: battleEvent.attack?.damage ?? 0,
+            location: battleEvent.attack?.location ?? '',
+            critical_hit: battleEvent.attack?.critical_hit ?? false,
           };
         } else {
           // Play immediately if no player strike is playing
-          beastDamageRef.current = battleEvent.attack?.damage || 0;
+          beastDamageRef.current = battleEvent.attack?.damage ?? 0;
           beastStrike.play();
           setCombatLog(`${beast!.baseName} attacked your ${battleEvent.attack?.location} for ${battleEvent.attack?.damage} damage ${battleEvent.attack?.critical_hit ? 'CRITICAL HIT!' : ''}`);
         }
