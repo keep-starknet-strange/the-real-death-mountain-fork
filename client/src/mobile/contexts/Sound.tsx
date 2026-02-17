@@ -41,7 +41,7 @@ export const SoundProvider = ({ children }: PropsWithChildren) => {
 
   const [playing, setPlaying] = useState(true);
   const [volume, setVolumeState] = useState(savedVolume ? parseFloat(savedVolume) : 0.5);
-  const [muted, setMutedState] = useState(savedMuted === 'true');
+  const [muted, setMutedState] = useState(savedMuted === 'true' || import.meta.env.VITE_APP_MUTED === 'true');
   const [hasInteracted, setHasInteracted] = useState(false)
 
   const audioRef = useRef(new Audio(tracks.Intro));
