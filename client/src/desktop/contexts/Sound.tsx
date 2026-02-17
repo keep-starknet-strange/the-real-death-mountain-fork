@@ -220,9 +220,9 @@ export const SoundProvider = ({ children }: PropsWithChildren) => {
 
   const [hasInteracted, setHasInteracted] = useState(false)
   const [volume, setVolumeState] = useState(savedVolume ? parseFloat(savedVolume) : 0.5);
-  const [muted, setMutedState] = useState(savedMuted === 'true');
+  const [muted, setMutedState] = useState(savedMuted === 'true' || import.meta.env.VITE_APP_MUTED === 'true');
   const [musicVolume, setMusicVolumeState] = useState(savedMusicVolume ? parseFloat(savedMusicVolume) : 0.25);
-  const [musicMuted, setMusicMutedState] = useState(savedMusicMuted === 'true');
+  const [musicMuted, setMusicMutedState] = useState(savedMusicMuted === 'true' || import.meta.env.VITE_APP_MUTED === 'true');
   const [startTimestamp, setStartTimestamp] = useState(0);
 
   const audioManager = useRef(new AudioManager());
