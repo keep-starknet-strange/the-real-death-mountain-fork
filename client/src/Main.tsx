@@ -1,6 +1,8 @@
 import { createRoot } from "react-dom/client";
 
 import App from "./App.tsx";
+import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
 
 // Dojo related imports
 import { init } from "@dojoengine/sdk";
@@ -15,6 +17,20 @@ import { useEffect, useState } from "react";
 import { Analytics } from "@vercel/analytics/react";
 import "./index.css";
 import { PostHogProvider } from "posthog-js/react";
+
+if (Capacitor.isNativePlatform()) {
+  const originalOpen = window.open;
+  window.open = ((url: string | URL) => {
+    Browser.open({ url: url.toString() }).catch((error) => {
+      console.warn("Failed to open browser", error);
+    });
+    return null as Window | null;
+  }) as typeof window.open;
+
+  window.addEventListener("beforeunload", () => {
+    window.open = originalOpen;
+  });
+}
 
 const options = {
   api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
