@@ -1,20 +1,20 @@
 import { useController } from '@/contexts/controller';
-import { ellipseAddress } from '@/utils/utils';
+import {ellipseAddress, isNative} from '@/utils/utils';
 import { Capacitor } from '@capacitor/core';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
 import { Button, ListItemIcon, Menu, MenuItem } from '@mui/material';
 import { useAccount } from '@starknet-react/core';
-import { useState } from 'react';
+import {useMemo, useState} from 'react';
 
 function WalletConnect() {
   const { isPending, playerName, login, logout, openProfile } = useController();
   const { account, address } = useAccount();
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
-  const isNative = Capacitor.isNativePlatform();
+  const checkIsNative = useMemo(() => isNative(), []);
 
   const handleLoggedInClick = (e: React.MouseEvent<HTMLElement>) => {
-    if (isNative) {
+    if (checkIsNative) {
       setMenuAnchor(e.currentTarget);
     } else {
       openProfile();
@@ -37,7 +37,7 @@ function WalletConnect() {
             >
               {playerName ? playerName : ellipseAddress(address, 4, 4)}
             </Button>
-            {isNative && (
+            {checkIsNative && (
               <Menu
                 anchorEl={menuAnchor}
                 open={!!menuAnchor}

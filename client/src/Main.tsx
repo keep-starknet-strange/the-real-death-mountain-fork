@@ -1,24 +1,21 @@
-import { createRoot } from "react-dom/client";
+import {createRoot} from "react-dom/client";
 
 import App from "./App.tsx";
-import { Capacitor } from "@capacitor/core";
-import { Browser } from "@capacitor/browser";
+import {Browser} from "@capacitor/browser";
 
 // Dojo related imports
-import { init } from "@dojoengine/sdk";
-import { DojoSdkProvider } from "@dojoengine/sdk/react";
-import { MetagameProvider } from "@/contexts/metagame.tsx";
-import {
-  DynamicConnectorProvider,
-  useDynamicConnector,
-} from "@/contexts/starknet.tsx";
-import { createDojoConfig } from "@dojoengine/core";
-import { useEffect, useState } from "react";
-import { Analytics } from "@vercel/analytics/react";
+import {init} from "@dojoengine/sdk";
+import {DojoSdkProvider} from "@dojoengine/sdk/react";
+import {MetagameProvider} from "@/contexts/metagame.tsx";
+import {DynamicConnectorProvider, useDynamicConnector,} from "@/contexts/starknet.tsx";
+import {createDojoConfig} from "@dojoengine/core";
+import {useEffect, useState} from "react";
+import {Analytics} from "@vercel/analytics/react";
 import "./index.css";
-import { PostHogProvider } from "posthog-js/react";
+import {PostHogProvider} from "posthog-js/react";
+import {isNative} from "@/utils/utils.ts";
 
-if (Capacitor.isNativePlatform()) {
+if (isNative()) {
   const originalOpen = window.open;
   window.open = ((url: string | URL) => {
     Browser.open({ url: url.toString() }).catch((error) => {
