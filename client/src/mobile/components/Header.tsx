@@ -54,7 +54,8 @@ export default Header
 const styles = {
   header: {
     width: '100%',
-    height: '50px',
+    height: '44px',
+    minHeight: '44px',
     borderBottom: '2px solid rgba(17, 17, 17, 1)',
     background: 'black',
     display: 'flex',
