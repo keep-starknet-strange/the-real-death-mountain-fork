@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>loot-survivor-2</string>
+	<string>Loot Survivor 2</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -20,6 +20,19 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleRoleEditor</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>io.lootsurvivor.mobile</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>lootsurvivor</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSApplicationCategoryType</key>
@@ -34,6 +47,8 @@
 	<array>
 		<string>armv7</string>
 	</array>
+	<key>UIStatusBarHidden</key>
+	<true/>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
@@ -49,20 +64,5 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
-	<key>UIStatusBarHidden</key>
-	<true/>
-	<key>CFBundleURLTypes</key>
-    <array>
-        <dict>
-            <key>CFBundleURLName</key>
-            <string>io.lootsurvivor.mobile</string>
-            <key>CFBundleURLSchemes</key>
-            <array>
-                <string>lootsurvivor</string>
-            </array>
-            <key>CFBundleRoleEditor</key>
-            <string>Editor</string>
-        </dict>
-    </array>
 </dict>
 </plist>
