@@ -2,10 +2,10 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'io.lootsurvivor.mobile',
-  appName: 'loot-survivor-2',
+  appName: 'Loot Survivor 2',
   webDir: 'dist',
   server: {
-    hostname: "lootsurvivor.io",
+    hostname: "loot-survivor",
     androidScheme: "https",
     iosScheme: "capacitor",
   },

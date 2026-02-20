@@ -14,9 +14,19 @@ import {createContext, PropsWithChildren, useContext, useEffect, useMemo, useSta
 import {useNavigate} from "react-router-dom";
 import {Account, AccountInterface, RpcProvider} from "starknet";
 import {useDynamicConnector} from "./starknet";
-import {delay, stringToFelt} from "@/utils/utils";
+import {delay, isNative, stringToFelt} from "@/utils/utils";
 import {useDungeon} from "@/dojo/useDungeon";
+import ControllerConnector from "@cartridge/connector/controller";
 import NativeConnector from "@/contexts/connector/NativeConnector.ts";
+
+/** Connector that may expose controller methods (ControllerConnector or NativeConnector). */
+type ConnectorWithController = {
+    username?: () => Promise<string | undefined>;
+    controller?: {
+        openProfile?: (tab?: string) => void;
+        openStarterPack?: (id: string | number) => Promise<void>;
+    };
+};
 
 export interface ControllerContext {
     account: AccountInterface | undefined;
@@ -101,11 +111,11 @@ export const ControllerProvider = ({children}: PropsWithChildren) => {
         }
     }, []);
 
-    // Get username when connector changes
+    // Get username when connector changes (works for both ControllerConnector and NativeConnector)
     useEffect(() => {
         const getUsername = async () => {
             try {
-                const name = await (connector as NativeConnector)?.username();
+                const name = await (connector as ConnectorWithController)?.username?.();
                 if (name) setUserName(name);
             } catch (error) {
                 console.error("Error getting username:", error);
@@ -116,7 +126,7 @@ export const ControllerProvider = ({children}: PropsWithChildren) => {
     }, [connector]);
 
     useEffect(() => {
-        if (!Capacitor.isNativePlatform()) return;
+        if (!isNative()) return;
 
         const handleDeepLink = async (url: string) => {
             try {
@@ -252,12 +262,18 @@ export const ControllerProvider = ({children}: PropsWithChildren) => {
                 showTermsOfService,
                 acceptTermsOfService,
 
-                openProfile: () => (connector as NativeConnector)?.controller?.openProfile(),
-                openBuyTicket: () => (connector as NativeConnector)?.controller?.openStarterPack(3),
+                openProfile: () =>
+                    (connector as ConnectorWithController)?.controller?.openProfile?.(),
+                openBuyTicket: () =>
+                    (connector as ConnectorWithController)?.controller?.openStarterPack?.(3),
                 login: () =>
-                    connect({
-                        connector: NativeConnector.fromConnectors(connectors),
-                    }),
+                    isNative()
+                        ? connect({
+                              connector: NativeConnector.fromConnectors(connectors),
+                          })
+                        : connect({
+                              connector: ControllerConnector.fromConnectors(connectors),
+                          }),
                 logout: () => disconnect(),
                 enterDungeon,
                 bulkMintGames,

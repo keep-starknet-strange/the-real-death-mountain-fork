@@ -218,10 +218,3 @@ input:-webkit-autofill {
 ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, #1B5E20 0%, #2E7D32 100%);
 }
-
-/* MUI Dialog/Modal: keep content inside safe area (fixed elements ignore body padding) */
-.MuiDialog-container,
-.MuiModal-root > div:not(.MuiBackdrop-root) {
-  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
-  box-sizing: border-box;
-}

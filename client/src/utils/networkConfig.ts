@@ -129,6 +129,54 @@ export function getNetworkConfig(networkKey: ChainId): NetworkConfig {
     if (!network) throw new Error(`Network ${networkKey} not found`);
 
     const contractPolicies: ContractPolicies = {
+        "0x0452810188c4cb3aebd63711a3b445755bc0d6c4f27b923fdd99b1a118858136": {
+            methods: [
+                {
+                    name: "Approve",
+                    entrypoint: "approve"
+                }
+            ]
+        },
+        "0xa67ef20b61a9846e1c82b411175e6ab167ea9f8632bd6c2091823c3629ec42": {
+            description: "Special dungeon mode with beast NFT rewards and jackpot system",
+            methods: [
+                {
+                    name: "Buy Game",
+                    description: "Purchase access to Beast Mode Dungeon",
+                    entrypoint: "buy_game"
+                }
+            ]
+        },
+    }
+
+    return {
+        chainId: network.chainId,
+        namespace: network.namespace,
+        manifest: network.manifest,
+        slot: network.slot,
+        preset: "loot-survivor",
+        vrf: network.vrf,
+        policies: {
+            contracts: contractPolicies
+        },
+        rpcUrl: network.rpcUrl,
+        toriiUrl: network.torii,
+        chains: [{rpcUrl: network.rpcUrl}],
+        tokens: network.tokens,
+        paymentTokens: network.paymentTokens,
+        denshokan: network.denshokan,
+        goldenToken: network.goldenToken,
+        ekuboRouter: network.ekuboRouter,
+        beasts: network.beasts,
+        gameAddress: network.gameAddress,
+    };
+}
+
+export function getNativePolicies(networkKey: ChainId): SessionPolicies {
+    const network = NETWORKS[networkKey as keyof typeof NETWORKS];
+    if (!network) throw new Error(`Network ${networkKey} not found`);
+
+    const contractPolicies: ContractPolicies = {
         // Dungeon Ticket
         "0x0452810188c4cb3aebd63711a3b445755bc0d6c4f27b923fdd99b1a118858136": {
             methods: [
@@ -297,25 +345,7 @@ export function getNetworkConfig(networkKey: ChainId): NetworkConfig {
     });
 
     return {
-        chainId: network.chainId,
-        namespace: network.namespace,
-        manifest: network.manifest,
-        slot: network.slot,
-        preset: "loot-survivor",
-        vrf: network.vrf,
-        policies: {
-            contracts: contractPolicies
-        },
-        rpcUrl: network.rpcUrl,
-        toriiUrl: network.torii,
-        chains: [{rpcUrl: network.rpcUrl}],
-        tokens: network.tokens,
-        paymentTokens: network.paymentTokens,
-        denshokan: network.denshokan,
-        goldenToken: network.goldenToken,
-        ekuboRouter: network.ekuboRouter,
-        beasts: network.beasts,
-        gameAddress: network.gameAddress,
+        contracts: policiesWithPayments
     };
 }
 
